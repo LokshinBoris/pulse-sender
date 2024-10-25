@@ -18,6 +18,10 @@ public class PulseSenderAppl
 	private static final int MAX_JUMP_PERCENT = 30;
 	private static final int JUMP_POSITIVE_PROBABILITY = 50;
 	private static final int JUMP_PROBABILITY = 80;
+	private static final int MAX_ERROR_PULSE_PROB=5;
+	private static final int MIN_ERROR_PULSE_PROB=3;
+	
+	private static final Long PATIENT_ID_PRINTED = 3L;
 	private static Map<Long,Integer> history=new HashMap();
 	static DatagramSocket socket;
 	static Random random=new Random();
@@ -65,6 +69,7 @@ public class PulseSenderAppl
 	{
 		long patientId=random.nextInt(1, N_PACIENT+1);
 		int value = getRandomPulseValue(patientId);
+//		if(patientId==PATIENT_ID_PRINTED) System.out.println("Pulse of patient ID="+patientId+" = "+value);
 		return new SensorData(seqNumber,patientId,value,System.currentTimeMillis());
 	}
 
@@ -76,18 +81,34 @@ public class PulseSenderAppl
 		if(lastValue==null) res=random.nextInt(MIN_PULSE_VALUE,MAX_PULSE_VALUE);
 		else
 		{
-			if(!isJumpProbability()) res=lastValue;
+			if(!isProbLess(JUMP_PROBABILITY)) res=lastValue;
 			else
 			{
-				int sign=getSignJump();
-				int persent=getPercentJump();
-				res=(int)(lastValue*(1+sign*persent/100.));
-				if(res>MAX_PULSE_VALUE) res=MAX_PULSE_VALUE;
-				else if (res<MIN_PULSE_VALUE) res=MIN_PULSE_VALUE;
+				if(isProbLess(MAX_ERROR_PULSE_PROB))
+				{
+					res=random.nextInt(MAX_PULSE_VALUE+11 , MAX_PULSE_VALUE+20);
+				}
+				else if(isProbLess(MAX_ERROR_PULSE_PROB))
+				{
+					res=random.nextInt(MIN_PULSE_VALUE-19 , MIN_PULSE_VALUE-10);					
+				}
+				else
+				{
+					int sign=getSignJump();
+					int persent=getPercentJump();
+					res=(int)(lastValue*(1+sign*persent/100.));
+					if(res>MAX_PULSE_VALUE) res=MAX_PULSE_VALUE;
+					else if (res<MIN_PULSE_VALUE) res=MIN_PULSE_VALUE;
+				}
 			}
 		}
 		history.put(patientId,res);
 		return res;
+	}
+
+	private static boolean isProbLess(int probability)
+	{
+		return random.nextInt(0,100)<probability;
 	}
 
 	private static int getPercentJump() 
@@ -100,8 +121,4 @@ public class PulseSenderAppl
 		return random.nextInt(0,100)>=JUMP_POSITIVE_PROBABILITY? 1:-1;
 	}
 
-	private static boolean isJumpProbability() 
-	{
-		return random.nextInt(0,100)<JUMP_PROBABILITY;
-	}
 }
